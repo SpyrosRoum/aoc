@@ -13,12 +13,12 @@
 (defn split-lists
   [text]
   (reduce
-   (fn [[list1 list2]
-        line]
-     (let [[a b] (clojure.string/split line #"   ")]
-       [(conj list1 (Integer. a))  (conj list2 (Integer. b)) ]))
-   [[] []]
-   (clojure.string/split text #"\n")))
+    (fn [[list1 list2]
+         line]
+      (let [[a b] (clojure.string/split line #"   ")]
+        [(conj list1 (Integer. a))  (conj list2 (Integer. b))]))
+    [[] []]
+    (clojure.string/split text #"\n")))
 
 ;; TODO: Could have used `frequencies` probably
 (defn count-occurancies

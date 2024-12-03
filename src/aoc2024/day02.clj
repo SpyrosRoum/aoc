@@ -1,5 +1,6 @@
 (ns aoc2024.day02
-  (:require [clojure.string :refer [split]]))
+  (:require
+   [clojure.string :refer [split]]))
 
 (def example-text "7 6 4 2 1
 1 2 7 8 9
@@ -13,20 +14,20 @@
 (defn parse-lists
   [text]
   (as-> text v
-      (split v #"\n")
-      (map #(split % #" ") v)
-      (map (fn [row] (map parse-long row)) v)))
+    (split v #"\n")
+    (map #(split % #" ") v)
+    (map (fn [row] (map parse-long row)) v)))
 
 (defn check-report
   [report]
   (let [going-up (< (first report) (second report))]
     (every?
-     (fn [[a b]]
-       (let [diff (- a b)]
-         (and (not= diff 0)
-              (<= (abs diff) 3)
-              (= (< diff 0) going-up))))
-     (partition 2 1 report))))
+      (fn [[a b]]
+        (let [diff (- a b)]
+          (and (not= diff 0)
+               (<= (abs diff) 3)
+               (= (< diff 0) going-up))))
+      (partition 2 1 report))))
 
 (defn report-without-idx
   [report idx]
