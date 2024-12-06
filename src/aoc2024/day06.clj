@@ -114,9 +114,9 @@
         guard-pos (get-in state [:guard :pos])
         path-with-guard (calc-path state)
         path (disj path-with-guard guard-pos)]
-    (->> (for [pos path]
-           (let [new-state (update state :obstacles #(conj % pos))]
-             (calc-path new-state)))
+    (->> path
+         (map (fn [pos] (update state :obstacles #(conj % pos))))
+         (pmap calc-path)
          (filter nil?)
          count)))
 
