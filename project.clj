@@ -5,6 +5,7 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [org.clojure/tools.trace "0.8.0"]
+                 [org.clojure/math.combinatorics "0.3.0"]
                  [com.clojure-goes-fast/clj-async-profiler "1.5.1"]]
   :main ^:skip-aot aoc2024.core
   :target-path "target/%s"
