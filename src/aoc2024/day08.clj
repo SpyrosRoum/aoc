@@ -1,4 +1,4 @@
-(ns aoc2024.day07
+(ns aoc2024.day08
   (:require
    [clojure.math.combinatorics :as combo]
    [clojure.string :refer [split split-lines]]))
