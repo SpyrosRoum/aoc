@@ -1,6 +1,5 @@
 (ns aoc2024.day10
   (:require
-   [clojure.tools.trace :refer [trace]]
    [clojure.string :refer [split split-lines]]))
 
 (def example-input "89010123
@@ -15,8 +14,6 @@
 (def raw-input (slurp "inputs/day10"))
 
 (def directions [:up :right :down :left])
-;; Scores is how many distinct 9s can reach
-;; Need to sum all the scores
 
 (defn parse-map
   [text]
@@ -39,7 +36,7 @@
 
 (defn find-potential-starts
   ([ctx] (let [zeroes (find-potential-starts ctx [] 0 0)]
-            (assoc ctx :zeroes zeroes)))
+           (assoc ctx :zeroes zeroes)))
   ([ctx zeroes x y]
    (cond
      (>= x (:width ctx)) (recur ctx zeroes 0 (inc y))
@@ -53,18 +50,19 @@
 (defn get-next-pos
   [ctx x y dir]
   (condp = dir
-      :up [x (dec y)]
-      :right [(inc x) y]
-      :down [x (inc y)]
-      :left [(dec x) y]))
+    :up [x (dec y)]
+    :right [(inc x) y]
+    :down [x (inc y)]
+    :left [(dec x) y]))
 
-(defn find-trail-ends
-  "Find unique trail ends, aka score"
-  ([ctx] (loop [trails {}
-                [zero & zeroes] (:zeroes ctx)]
-           (if (nil? zero)
-             (assoc ctx :trails trails)
-             (recur (assoc trails zero (find-trail-ends ctx zero 0 [])) zeroes))))
+(defn find-trails
+  "Unique trails can be found by passing `#{}` to `collect-into`.
+  Otherwise a `[]` can be used to find all trails"
+  ([collect-into ctx]
+   (->> (:zeroes ctx)
+        (map #(find-trails ctx % 0 collect-into))
+        (zipmap (:zeroes ctx))
+        (assoc ctx :trails)))
   ([ctx [x y] curr-expected trails]
    (let [curr (get-pos ctx x y)]
      (cond
@@ -78,39 +76,16 @@
        ;; Check for a trail in each direction and count them
        (= curr-expected curr) (->> directions
                                    (map #(get-next-pos ctx x y %))
-                                   (map #(find-trail-ends ctx % (inc curr-expected) trails))
+                                   (map #(find-trails ctx % (inc curr-expected) trails))
                                    (apply concat trails)
-                                   (into #{}))))))
-
-(defn find-unique-trails
-  "Find unique trails, aka rating"
-  ([ctx] (loop [sum 0
-                [zero & zeroes] (:zeroes ctx)]
-           (if (nil? zero)
-             (assoc ctx :trail-count sum)
-             (recur (+ sum (find-unique-trails ctx zero 0)) zeroes))))
-  ([ctx [x y] curr-expected]
-   (let [curr (get-pos ctx x y)]
-     (cond
-       ;; We got out of bounds, so no trail
-       (nil? curr) 0
-       ;; We got to the end, so there is a trail
-       (and (= curr-expected 9)
-            (= curr 9)) 1
-       ;; Current is not an increment of prev, no trail
-       (not= curr-expected curr) 0
-       ;; Check for a trail in each direction and count them
-       (= curr-expected curr) (->> directions
-                                   (map #(get-next-pos ctx x y %))
-                                   (map #(find-unique-trails ctx % (inc curr-expected)))
-                                   (reduce +))))))
+                                   (into (empty trails)))))))
 
 (defn part1
   [text]
   (->> text
        parse-map
        find-potential-starts
-       find-trail-ends
+       (find-trails #{})
        :trails
        vals
        (map count)
@@ -121,8 +96,11 @@
   (->> text
        parse-map
        find-potential-starts
-       find-unique-trails
-       :trail-count))
+       (find-trails [])
+       :trails
+       vals
+       (map count)
+       (reduce +)))
 
 (let [text raw-input]
   (println "Part 1:" (part1 text))
