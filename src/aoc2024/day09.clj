@@ -1,15 +1,18 @@
 (ns aoc2024.day09
   (:require
    [clojure.string :refer [split]]
-   [clojure.tools.trace :refer [trace]]
-   [data.deque :as dq]))
+   [clojure.tools.trace :refer [trace]]))
 
 (def example-input "2333133121414131402")
 
 (def raw-input (slurp "inputs/day09"))
 
-(defn pos-comparator [a b] (<= (:pos a) (:pos b)))
-(def sorted-set-by-pos (sorted-set-by pos-comparator))
+(defn pos-comparator [op a b ] (op (:pos a) (:pos b)))
+(def pos-comparator-asc (partial pos-comparator >=))
+(def pos-comparator-desc (partial pos-comparator <=))
+
+(def sorted-set-by-pos-asc (sorted-set-by pos-comparator-asc))
+(def sorted-set-by-pos-desc (sorted-set-by pos-comparator-desc))
 
 (defn calc-next-pos
   [{files :files blocks :blocks}]
@@ -36,18 +39,33 @@
 (defn parse-disk
   [text]
   (loop [[curr & others] (split text #"")
-         state {:files (sorted-set-by pos-comparator) :blocks []}
+         state {:files (sorted-set-by-pos-asc) :blocks [] :new-blocks (sorted-set-by-pos-asc)}
          i 0]
     (cond
       (nil? curr) state
       (even? i) (recur others (parse-file state curr (count (:files state))) (inc i))
       (odd? i) (recur others (parse-block state curr (count (:files state))) (inc i)))))
 
+(defn peek-next-block
+  [state]
+  (min-key :pos (first (:blocks state)) (first (:new-blocks state))))
+
+(defn get-next-block
+  [state]
+  (if (< (first (:blocks state)) (first (:new-blocks state)))
+    (-> state
+        (assoc :block (first (:blocks state)))
+        (assoc :blocks (rest (:blocks state))))
+    (-> state
+        (assoc :block (first (:new-blocks state)))
+        (assoc :blocks (rest (:new-blocks state)))))))
+
 (defn defragment-file
   "Defragment the last file from `state`. Stops when file is completely absorbed or there are no blocks left."
   ([state] (let [file (last (:files state))
                  files (butlast (:files state))
                  [block & blocks] (:blocks state)
+                 [nblock & nblocks] (:new-blocks state)
                  new-state {:files files :blocks blocks}]
              (defragment-file new-state file block)))
   ([state file block]
@@ -57,9 +75,9 @@
      (and (<= (:size file) 0)
           (<= (:size block) 0)) state
      ;; File is consumed but there is leftover block
-     (<= (:size file) 0) (update state :blocks #(into sorted-set-by-pos (conj % block)))
+     (<= (:size file) 0) (update state :blocks #(into sorted-set-by-pos-desc (conj % block)))
      ;; File is not consumed but we are out of blocks
-     (<= (:size block) 0) (update state :files #(into sorted-set-by-pos (conj % file)))
+     (<= (:size block) 0) (update state :files #(into sorted-set-by-pos-desc (conj % file)))
      ;; More file and blocks to go
      :else
      (let [size-to-move (min (:size file) (:size block))
@@ -68,19 +86,23 @@
            remaining-block (-> block
                                (update :size #(- % size-to-move))
                                (update :pos #(+ % size-to-move)))
-           new-state (update state :files #(into sorted-set-by-pos (conj % new-file)))]
+           new-state (update state :files #(into sorted-set-by-pos-desc (conj % new-file)))]
        (if (<= (:size remaining-block) 0)
          (let [[block & others] (:blocks new-state)]
            (recur (assoc new-state :blocks others) remaining-file block))
          (recur new-state remaining-file remaining-block))))))
 
+(defn defragmented?
+  [state]
+  (let [first-block (peek-next-block state)
+        last-file (last (:files state))]
+    (< (:pos last-file) (:pos first-block)))))
+
 (defn defragment-disk
   [state]
   (loop [state state]
-    (if (empty? (:blocks state))
-      (do
-        (trace "STATE" state)
-        {:files (:files state)})
+    (if (defragmented? state)
+      {:files (:files state)}
       (recur (defragment-file state)))))
 
 (defn checksum-file
